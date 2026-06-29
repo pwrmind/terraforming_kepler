@@ -3,458 +3,483 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Terraforming Mars - Native Engine</title>
+    <title>Terraforming Mars - Fixed Prototype</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
     <style>
         :root {
-            --bg-dark: #0f0f12;
-            --card-bg: #1a1a22;
-            --tm-orange: #d05000;
-            --tm-blue: #0066bb;
-            --tm-green: #1e7b1e;
+            --bg: #0f0f12; --card: #1a1a22; --accent: #d05000; --blue: #0066bb; --green: #1e7b1e;
+            --text: #e0e0e0; --muted: #888; --border: #2d2d3d;
         }
-        body {
-            font-family: 'Roboto', sans-serif;
-            background-color: var(--bg-dark);
-            color: #e0e0e0;
-            margin: 0;
-            padding: 20px;
-        }
-        h2, h3, .font-orbitron { font-family: 'Orbitron', sans-serif; }
-        .game-layout {
-            display: grid;
-            grid-template-columns: 320px 1fr;
-            gap: 20px;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-        .sidebar { background: var(--card-bg); padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .metric-box { display: flex; align-items: center; justify-content: space-between; background: #23232f; padding: 12px; margin-bottom: 10px; border-radius: 6px; }
-        .player-dashboard { background: var(--card-bg); padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .resources-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 15px; }
-        .resource-card { background: #22222b; border: 1px solid #363645; border-radius: 6px; padding: 12px; text-align: center; }
-        .prod-badge { background: #b07500; color: black; font-weight: bold; padding: 1px 5px; border-radius: 4px; font-size: 0.8rem; display: inline-block; margin-top: 5px; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Roboto', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        h1, h2, h3, .orbitron { font-family: 'Orbitron', sans-serif; margin: 0; }
+        .layout { display: grid; grid-template-columns: 280px 1fr; gap: 20px; max-width: 1400px; margin: 0 auto; }
         
-        /* ГЕКСАГОНАЛЬНОЕ ПОЛЕ */
-        .board-container {
-            background: #14141c;
-            padding: 30px;
-            border-radius: 8px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 450px;
-            border: 1px solid #2d2d3d;
-            overflow: auto;
-        }
-        .hex-grid { position: relative; }
+        /* Панели */
+        .panel { background: var(--card); padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
+        .metric { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #222; }
+        .metric:last-child { border-bottom: none; }
+        .btn { width: 100%; padding: 10px; margin-top: 8px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:disabled { background: #3a3a45; color: #666; cursor: not-allowed; }
+        .btn-secondary { background: #333; color: var(--text); }
+        .btn-action { background: #2a3b4c; color: #a6caf0; margin: 5px 0; }
+        .btn-action:disabled { opacity: 0.5; }
+
+        /* Уведомления */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 200; display: flex; flex-direction: column; gap: 8px; }
+        .toast { background: #222; border-left: 4px solid var(--accent); padding: 12px 16px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); animation: slideIn 0.3s; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Поле */
+        .board-wrap { overflow: auto; min-height: 400px; display: flex; justify-content: center; align-items: center; background: #111; border-radius: 8px; padding: 20px; }
         .hex {
-            position: absolute;
-            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-            background: #3a3a45;
-            transition: all 0.2s;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.7rem;
-            font-weight: bold;
-            color: #aaa;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.6);
+            position: absolute; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            background: #2a2a35; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 0.75rem; cursor: pointer; transition: 0.2s; user-select: none;
+            width: 69.28px; height: 80px; /* Точно под size=40 */
         }
-        .hex:hover { filter: brightness(1.3); transform: scale(1.05); z-index: 10; }
-        .hex.ocean-reserve { background: #132235; border: 1px solid var(--tm-blue); }
-        .hex.has-city { background: #555; color: white; }
-        .hex.has-ocean { background: var(--tm-blue); color: white; }
-        .hex.has-greenery { background: var(--tm-green); color: white; }
-        .hex.pending { animation: pulse 1s infinite; border: 2px solid var(--tm-orange); }
-        @keyframes pulse { 50% { filter: brightness(1.5); } }
+        .hex:hover { filter: brightness(1.2); }
+        .hex.valid { background: #1e3a2a; border: 2px solid var(--green); animation: pulse 1s infinite; }
+        .hex.ocean-zone { background: #132235; }
+        .hex.has-city { background: #444; } .hex.has-ocean { background: var(--blue); }
+        .hex.has-greenery { background: var(--green); }
+        @keyframes pulse { 50% { box-shadow: 0 0 10px var(--green); } }
 
-        /* КАРТЫ И КНОПКИ */
-        .cards-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; margin-top: 15px; }
-        .project-card { background: var(--card-bg); border-radius: 6px; padding: 15px; border-top: 4px solid var(--tm-blue); display: flex; flex-direction: column; justify-content: space-between; }
-        .btn { background: var(--tm-orange); color: white; border: none; padding: 10px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
-        .btn:disabled { background: #3a3a45; color: #666; cursor: not-allowed; }
-        .btn-secondary { background: #444; }
+        /* Карты */
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 15px; }
+        .card { background: #1e1e28; border-top: 3px solid var(--blue); padding: 12px; border-radius: 6px; }
+        .card.req-fail { border-top-color: #ff4444; opacity: 0.6; }
 
-        /* МОДАЛЬНОЕ ОКНО */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 100;
-        }
-        .modal-content {
-            background: var(--card-bg); padding: 25px; border-radius: 8px; width: 380px;
-            border: 1px solid #3d3d4d; box-shadow: 0 10px 25px rgba(0,0,0,0.7);
-        }
-        .payment-row { display: flex; justify-content: space-between; align-items: center; margin: 15px 0; background: #22222b; padding: 10px; border-radius: 6px; }
-        .payment-input { width: 60px; background: #111; border: 1px solid #444; color: white; padding: 5px; text-align: center; border-radius: 4px; }
-        .alert-box { background: #4a2c00; border: 1px solid var(--tm-orange); padding: 10px; border-radius: 6px; margin-top: 15px; text-align: center; font-weight: bold; }
+        /* Модальные окна */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .modal-content { background: var(--card); padding: 25px; border-radius: 8px; width: 400px; border: 1px solid var(--border); }
+        .input-row { display: flex; justify-content: space-between; align-items: center; margin: 10px 0; background: #222; padding: 8px; border-radius: 6px; }
+        input[type="number"] { width: 60px; background: #111; border: 1px solid #444; color: white; padding: 5px; text-align: center; border-radius: 4px; }
+        [x-cloak] { display: none !important; }
     </style>
 </head>
 <body>
 
-<div class="game-layout" x-data="gameUI()">
+<div class="layout" x-data="gameUI()">
+    <!-- Уведомления -->
+    <div class="toast-container">
+        <template x-for="t in state.notifications" :key="t.id">
+            <div class="toast" x-text="t.msg" @click="removeNotification(t.id)"></div>
+        </template>
+    </div>
+
     <!-- ЛЕВАЯ ПАНЕЛЬ -->
-    <aside class="sidebar">
-        <h2 class="font-orbitron" style="color: var(--tm-orange); margin-top: 0;">ПОКОЛЕНИЕ <span x-text="state.generation"></span></h2>
-        <div class="metric-box">
-            <span><i class="fa-solid fa-temperature-half" style="color: #ff4d4d;"></i> Темп:</span>
-            <strong class="font-orbitron" x-text="state.globalTemperature + ' °C'"></strong>
-        </div>
-        <div class="metric-box">
-            <span><i class="fa-solid fa-wind" style="color: #a6caf0;"></i> O2:</span>
-            <strong class="font-orbitron" x-text="state.globalOxygen + ' %'"></strong>
-        </div>
-        <div class="metric-box">
-            <span><i class="fa-solid fa-droplet" style="color: var(--tm-blue);"></i> Океаны:</span>
-            <strong class="font-orbitron" x-text="state.globalOceans + ' / 9'"></strong>
+    <aside class="panel">
+        <h2 class="orbitron" style="color: var(--accent);">ПОКОЛЕНИЕ <span x-text="state.generation"></span></h2>
+        <div style="margin: 15px 0;">
+            <div class="metric"><span>🌡️ Темп:</span><strong x-text="state.globalTemperature + '°C'"></strong></div>
+            <div class="metric"><span>💨 O2:</span><strong x-text="state.globalOxygen + '%'"></strong></div>
+            <div class="metric"><span>🌊 Океаны:</span><strong x-text="state.globalOceans + '/9'"></strong></div>
+            <div class="metric"><span>⏳ Действий:</span><strong x-text="2 - state.actionsTaken + ' / 2'"></strong></div>
         </div>
         
-        <button class="btn btn-secondary" @click="passTurn()" :disabled="activePlayer.passed">
-            <i class="fa-solid fa-forward"></i> Закончить ход / Пас
+        <button class="btn btn-secondary" @click="passTurn()" :disabled="activePlayer.passed || state.gameEnded">
+            <i class="fa-solid fa-forward"></i> Закончить ход
+        </button>
+        <button class="btn btn-secondary" style="background:#4a2c00;" @click="startResearch()" :disabled="state.researchPhaseActive || state.gameEnded">
+            <i class="fa-solid fa-microscope"></i> Фаза исследований
         </button>
 
-        <div x-show="state.pendingAction" class="alert-box" x-cloak>
-            ⚠️ Выберите клетку для размещения: <span x-text="state.pendingAction.tileType"></span>
+        <div style="margin-top: 15px; font-size: 0.85rem; color: #aaa;">
+            <div x-show="state.pendingAction" style="background:#222; padding:8px; border-radius:6px; text-align:center;">
+                📍 Размещаем: <strong x-text="state.pendingAction.type" style="color:var(--accent);"></strong><br>
+                <span style="font-size:0.75rem;">Кликните по подсвеченному гексу</span>
+                <button class="btn btn-secondary" style="margin-top:5px; font-size:0.7rem;" @click="cancelPlacement()">Отмена</button>
+            </div>
         </div>
     </aside>
 
     <!-- ГЛАВНАЯ ЗОНА -->
     <main>
-        <section class="player-dashboard">
-            <h3 style="margin-top:0;">Корпорация: <span x-text="activePlayer.id" style="color: var(--tm-orange);"></span> 
-                <span x-show="activePlayer.passed" style="color: #888; font-size: 0.8rem;">(Пас)</span>
-            </h3>
-            <div style="font-size: 0.9rem; color: #aaa;">TR: <strong class="font-orbitron" x-text="activePlayer.terraformRating" style="color: white;"></strong></div>
-            <div class="resources-grid">
-                <div class="resource-card">
-                    <i class="fa-solid fa-coins" style="color: #ffd700;"></i>
-                    <div>МК: <strong x-text="activePlayer.resources.megacredits"></strong></div>
-                    <div class="prod-badge">+<span x-text="activePlayer.production.megacredits"></span></div>
+        <!-- Планшет игрока -->
+        <section class="panel" style="margin-bottom: 15px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3>Корпорация: <span x-text="activePlayer.id" style="color:var(--accent);"></span> 
+                    <span x-show="activePlayer.passed" style="color:var(--muted); font-size:0.8rem;">(Пас)</span>
+                </h3>
+                <div>TR: <strong class="orbitron" x-text="activePlayer.terraformRating"></strong> | 
+                      VP: <strong class="orbitron" x-text="calculateVP()"></strong>
                 </div>
-                <div class="resource-card">
-                    <i class="fa-solid fa-hammer" style="color: #b0b0b0;"></i>
-                    <div>Сталь: <strong x-text="activePlayer.resources.steel"></strong></div>
-                    <div class="prod-badge">+<span x-text="activePlayer.production.steel"></span></div>
-                </div>
-                <div class="resource-card">
-                    <i class="fa-solid fa-shuttle-space" style="color: #e0b0ff;"></i>
-                    <div>Титан: <strong x-text="activePlayer.resources.titanium"></strong></div>
-                    <div class="prod-badge">+<span x-text="activePlayer.production.titanium"></span></div>
-                </div>
-                <div class="resource-card">
-                    <i class="fa-solid fa-leaf" style="color: var(--tm-green);"></i>
-                    <div>Растения: <strong x-text="activePlayer.resources.plants"></strong></div>
-                    <div class="prod-badge">+<span x-text="activePlayer.production.plants"></span></div>
-                </div>
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(6, 1fr); gap:10px; margin-top:10px; text-align:center;">
+                <div style="background:#222; padding:8px; border-radius:6px;">🟡 МК: <strong x-text="activePlayer.resources.megacredits"></strong></div>
+                <div style="background:#222; padding:8px; border-radius:6px;">🔩 Сталь: <strong x-text="activePlayer.resources.steel"></strong></div>
+                <div style="background:#222; padding:8px; border-radius:6px;">🔮 Титан: <strong x-text="activePlayer.resources.titanium"></strong></div>
+                <div style="background:#222; padding:8px; border-radius:6px;">🌿 Растения: <strong x-text="activePlayer.resources.plants"></strong></div>
+                <div style="background:#222; padding:8px; border-radius:6px;">⚡ Энергия: <strong x-text="activePlayer.resources.energy"></strong></div>
+                <div style="background:#222; padding:8px; border-radius:6px;">🔥 Тепло: <strong x-text="activePlayer.resources.heat"></strong></div>
             </div>
         </section>
 
-        <!-- ПОЛЕ МАРСА -->
-        <section style="margin-bottom: 20px;">
-            <h3>Поверхность планеты</h3>
-            <div class="board-container">
-                <div class="hex-grid" :style="`width: ${state.boardWidth}px; height: ${state.boardHeight}px;`">
-                    <template x-for="cell in state.board" :key="cell.id">
-                        <div class="hex"
-                             :class="{
-                                'ocean-reserve': cell.type === 'OCEAN_RESERVE' && !cell.tile,
-                                'has-city': cell.tile?.type === 'CITY',
-                                'has-ocean': cell.tile?.type === 'OCEAN',
-                                'has-greenery': cell.tile?.type === 'GREENERY',
-                                'pending': state.pendingAction && !cell.tile
-                             }"
-                             :style="getHexStyle(cell)"
-                             @click="handleHexClick(cell)">
-                            <span x-text="cell.tile ? cell.tile.type : (cell.type === 'OCEAN_RESERVE' ? '🌊' : '')"></span>
-                            <span style="font-size: 0.6rem; opacity: 0.5;" x-text="`q:${cell.q} r:${cell.r}`"></span>
-                        </div>
-                    </template>
-                </div>
-            </div>
-        </section>
-
-        <!-- КАРТЫ В РУКЕ -->
-        <section>
-            <h3>Карты проектов</h3>
-            <div class="cards-container">
-                <template x-for="card in handCards" :key="card.id">
-                    <div class="project-card">
-                        <div>
-                            <h4 x-text="card.name" style="margin:0 0 5px 0;"></h4>
-                            <p style="font-size:0.8rem; color:#aaa; margin:0;">
-                                Теги: <span x-text="card.tags.join(', ')"></span>
-                            </p>
-                        </div>
-                        <button class="btn" @click="startCardPayment(card)" :disabled="activePlayer.passed || state.pendingAction">
-                            Сыграть (<span x-text="card.baseCost"></span> МК)
-                        </button>
+        <!-- Карта Марса -->
+        <section class="board-wrap">
+            <div class="hex-grid" :style="`width:${state.boardWidth}px; height:${state.boardHeight}px; position:relative;`">
+                <template x-for="cell in state.board" :key="cell.id">
+                    <div class="hex" 
+                         :class="{
+                             'ocean-zone': cell.type==='OCEAN_RESERVE' && !cell.tile,
+                             'has-city': cell.tile?.type==='CITY',
+                             'has-ocean': cell.tile?.type==='OCEAN',
+                             'has-greenery': cell.tile?.type==='GREENERY',
+                             'valid': isValidPlacement(cell)
+                         }"
+                         :style="`left:${cell.x}px; top:${cell.y}px;`"
+                         @click="handleHexClick(cell)">
+                        <span x-text="cell.tile?.type || (cell.type==='OCEAN_RESERVE'?'🌊':'')"></span>
+                        <span style="font-size:0.6rem; opacity:0.5;" x-text="`${cell.q},${cell.r}`"></span>
                     </div>
                 </template>
             </div>
         </section>
+
+        <!-- Карты и Стандартные проекты -->
+        <section style="margin-top:15px;">
+            <h3>📦 Карты проектов</h3>
+            <div class="cards-grid">
+                <template x-for="card in state.handCards" :key="card.id">
+                    <div class="card" :class="{'req-fail': !checkRequirements(card)}">
+                        <h4 x-text="card.name"></h4>
+                        <div style="font-size:0.8rem; color:#aaa; margin:4px 0;">
+                            Теги: <span x-text="card.tags.join(', ')"></span> | 
+                            Требования: <span x-text="card.requirements || 'Нет'"></span>
+                        </div>
+                        <button class="btn btn-action" 
+                                @click="startPayment(card)" 
+                                :disabled="!canAct() || !checkRequirements(card) || card.placementTileType && state.pendingAction">
+                            Играть (<span x-text="card.cost"></span> МК)
+                        </button>
+                    </div>
+                </template>
+            </div>
+
+            <h3 style="margin-top:20px;">🏗️ Стандартные проекты</h3>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="btn btn-action" style="flex:1;" @click="standardProject('power')" :disabled="!canAct() || activePlayer.resources.heat < 14">⚡ Электростанция (14🔥 -> +1⚡)</button>
+                <button class="btn btn-action" style="flex:1;" @click="standardProject('aquifer')" :disabled="!canAct() || activePlayer.resources.megacredits < 18">🌊 Аквафер (18💧 -> Океан)</button>
+                <button class="btn btn-action" style="flex:1;" @click="standardProject('greenery')" :disabled="!canAct() || activePlayer.resources.plants < 8">🌿 Озеленение (8🌿 -> Лес)</button>
+                <button class="btn btn-action" style="flex:1;" @click="standardProject('city')" :disabled="!canAct() || activePlayer.resources.megacredits < 25">🏙️ Город (25💰 -> Город)</button>
+            </div>
+        </section>
     </main>
 
-    <!-- МОДАЛЬНОЕ ОКНО ОПЛАТЫ -->
-    <div x-show="showPaymentModal" class="modal-overlay" x-cloak @click.self="showPaymentModal = false">
+    <!-- Модальное окно оплаты -->
+    <div x-show="showModal" class="modal" x-cloak @click.self="showModal=false">
         <div class="modal-content">
-            <h3 style="margin-top:0;">Оплата: <span x-text="selectedCard?.name"></span></h3>
-            <p>База: <strong x-text="selectedCard?.baseCost"></strong> МК</p>
+            <h3>Оплата: <span x-text="selectedCard?.name"></span></h3>
+            <p>Стоимость: <strong x-text="selectedCard?.cost"></strong> МК</p>
             
-            <template x-if="selectedCard?.tags.includes('space')">
-                <div class="payment-row">
-                    <span>Титан (1 = 3 МК)</span>
-                    <input type="number" class="payment-input" min="0" :max="activePlayer.resources.titanium" x-model.number="payment.titanium">
-                </div>
-            </template>
             <template x-if="selectedCard?.tags.includes('building')">
-                <div class="payment-row">
-                    <span>Сталь (1 = 2 МК)</span>
-                    <input type="number" class="payment-input" min="0" :max="activePlayer.resources.steel" x-model.number="payment.steel">
+                <div class="input-row">
+                    <span>Сталь (1=2МК)</span>
+                    <input type="number" min="0" :max="activePlayer.resources.steel" x-model.number="pay.steel">
+                </div>
+            </template>
+            <template x-if="selectedCard?.tags.includes('space')">
+                <div class="input-row">
+                    <span>Титан (1=3МК)</span>
+                    <input type="number" min="0" :max="activePlayer.resources.titanium" x-model.number="pay.ti">
                 </div>
             </template>
 
-            <div style="text-align: right; margin: 15px 0;">
-                Остаток МК: <strong x-text="calculateMCRemainder()"></strong>
+            <div style="text-align:right; margin:10px 0;">
+                Остаток к оплате МК: <strong x-text="calcMCNeeded()"></strong>
+                <div style="font-size:0.8rem; color:#aaa;" x-show="calcMCNeeded() > activePlayer.resources.megacredits" x-cloak>❌ Недостаточно МК</div>
             </div>
 
-            <div style="display: flex; gap: 10px;">
-                <button class="btn btn-secondary" @click="showPaymentModal = false">Отмена</button>
-                <button class="btn" :disabled="!isPaymentValid()" @click="confirmPayment()">Подтвердить</button>
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-secondary" @click="showModal=false">Отмена</button>
+                <button class="btn btn-primary" :disabled="calcMCNeeded() > activePlayer.resources.megacredits" @click="confirmPayment()">Подтвердить</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно конца игры -->
+    <div x-show="state.gameEnded" class="modal" x-cloak>
+        <div class="modal-content" style="text-align:center;">
+            <h2 class="orbitron" style="color:var(--green);">🌍 ТЕРРАФОРМИРОВАНИЕ ЗАВЕРШЕНО!</h2>
+            <div style="margin:20px 0; text-align:left;">
+                <template x-for="p in state.players" :key="p.id">
+                    <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #333;">
+                        <span x-text="p.id"></span>
+                        <strong><span x-text="calculateVPForPlayer(p)"></span> VP</strong>
+                    </div>
+                </template>
+            </div>
+            <button class="btn btn-primary" @click="resetGame()">Новая игра</button>
         </div>
     </div>
 </div>
 
 <script>
 function gameUI() {
-    // 1. ИНИЦИАЛИЗАЦИЯ СОСТОЯНИЯ (Чистые данные для реактивности Alpine)
-    const state = {
-        generation: 1,
-        globalTemperature: -30,
-        globalOxygen: 0,
-        globalOceans: 0,
-        phase: 'ACTION',
-        playerOrder: ['Philares', 'Tharsis'],
-        activePlayerIndex: 0,
-        pendingAction: null,
-        players: [
-            {
-                id: 'Philares',
-                terraformRating: 20,
-                resources: { megacredits: 47, steel: 2, titanium: 3, plants: 0, energy: 0, heat: 0 },
-                production: { megacredits: 0, steel: 1, titanium: 1, plants: 0, energy: 0, heat: 0 },
-                passed: false
-            },
-            {
-                id: 'Tharsis',
-                terraformRating: 20,
-                resources: { megacredits: 40, steel: 0, titanium: 0, plants: 0, energy: 0, heat: 0 },
-                production: { megacredits: 3, steel: 0, titanium: 0, plants: 0, energy: 0, heat: 0 },
-                passed: false
-            }
-        ],
-        board: [
-            { id: 'h1', q: 0, r: 0, type: 'LAND', tile: null },
-            { id: 'h2', q: 1, r: 0, type: 'LAND', tile: null },
-            { id: 'h3', q: -1, r: 1, type: 'LAND', tile: null },
-            { id: 'h4', q: 0, r: 1, type: 'OCEAN_RESERVE', tile: null },
-            { id: 'h5', q: 1, r: -1, type: 'LAND', tile: null },
-            { id: 'h6', q: 2, r: -1, type: 'OCEAN_RESERVE', tile: null },
-            { id: 'h7', q: -1, r: 0, type: 'LAND', tile: null },
-            { id: 'h8', q: 0, r: -1, type: 'LAND', tile: null },
-            { id: 'h9', q: 1, r: 1, type: 'OCEAN_RESERVE', tile: null }
-        ],
-        boardWidth: 0,
-        boardHeight: 0
-    };
-
-    // 2. МАТЕМАТИКА ГЕКСАГОНАЛЬНОЙ СЕТКИ (Динамический расчет без хардкода)
     const size = 40;
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    state.board.forEach(cell => {
-        cell.x = size * (Math.sqrt(3) * cell.q + Math.sqrt(3) / 2 * cell.r);
-        cell.y = size * (3 / 2 * cell.r);
-        if (cell.x < minX) minX = cell.x;
-        if (cell.y < minY) minY = cell.y;
-        if (cell.x > maxX) maxX = cell.x;
-        if (cell.y > maxY) maxY = cell.y;
-    });
-    state.board.forEach(cell => {
-        cell.x -= minX;
-        cell.y -= minY;
-    });
-    state.boardWidth = (maxX - minX) + size * 2;
-    state.boardHeight = (maxY - minY) + size * 2;
+    // Генерация гексов (осевые координаты)
+    const rawHexes = [
+        {q:0,r:0,type:'LAND'}, {q:1,r:0,type:'LAND'}, {q:0,r:1,type:'OCEAN_RESERVE'},
+        {q:-1,r:1,type:'LAND'}, {q:1,r:-1,type:'LAND'}, {q:2,r:-1,type:'OCEAN_RESERVE'},
+        {q:-1,r:0,type:'LAND'}, {q:0,r:-1,type:'LAND'}, {q:1,r:1,type:'OCEAN_RESERVE'}
+    ];
+    
+    // Расчет позиций и размеров
+    let board = rawHexes.map((h, i) => ({
+        ...h, id: `h${i}`, tile: null,
+        x: size * (Math.sqrt(3) * h.q + Math.sqrt(3)/2 * h.r),
+        y: size * (3/2 * h.r)
+    }));
+    let minX = Math.min(...board.map(c=>c.x)), minY = Math.min(...board.map(c=>c.y));
+    let maxX = Math.max(...board.map(c=>c.x)), maxY = Math.max(...board.map(c=>c.y));
+    board.forEach(c => { c.x -= minX; c.y -= minY; });
+    const boardWidth = (maxX - minX) + size*2;
+    const boardHeight = (maxY - minY) + size*2;
 
     return {
-        state,
-        showPaymentModal: false,
+        state: {
+            generation: 1,
+            globalTemperature: -30, globalOxygen: 0, globalOceans: 0,
+            playerOrder: ['Philares', 'Tharsis'], activePlayerIndex: 0,
+            actionsTaken: 0, researchPhaseActive: false, gameEnded: false,
+            notifications: [],
+            pendingAction: null,
+            players: [
+                { id: 'Philares', terraformRating: 20, resources: { megacredits: 45, steel: 2, titanium: 3, plants: 0, energy: 0, heat: 0 }, production: { megacredits: 0, steel: 1, titanium: 1, plants: 0, energy: 0, heat: 0 }, passed: false },
+                { id: 'Tharsis', terraformRating: 20, resources: { megacredits: 40, steel: 0, titanium: 0, plants: 0, energy: 0, heat: 0 }, production: { megacredits: 3, steel: 0, titanium: 0, plants: 0, energy: 0, heat: 0 }, passed: false }
+            ],
+            handCards: [],
+            board, boardWidth, boardHeight
+        },
+        resourceValues: { steelValue: 2, titaniumValue: 3 },
+        showModal: false,
         selectedCard: null,
-        payment: { steel: 0, titanium: 0 },
-        handCards: [
-            { id: 'c1', name: 'Космический Лифт', baseCost: 27, tags: ['space'], placementTileType: null },
-            { id: 'c2', name: 'Мангровые Леса', baseCost: 23, tags: ['plant'], placementTileType: 'GREENERY' },
-            { id: 'c3', name: 'Поселение у Каньона', baseCost: 25, tags: ['building', 'city'], placementTileType: 'CITY' }
-        ],
+        pay: { steel: 0, ti: 0 },
 
-        get activePlayer() {
-            return this.state.players.find(p => p.id === this.state.playerOrder[this.state.activePlayerIndex]);
+        get activePlayer() { return this.state.players.find(p => p.id === this.state.playerOrder[this.state.activePlayerIndex]); },
+        
+        canAct() { return !this.activePlayer.passed && this.state.actionsTaken < 2 && !this.state.pendingAction; },
+        
+        // Валидация требований карт
+        checkRequirements(card) {
+            if (!card.requirements) return true;
+            const { globalTemperature: temp, globalOxygen: o2, globalOceans: oceans } = this.state;
+            if (card.requirements.temp && temp < card.requirements.temp) return false;
+            if (card.requirements.o2 && o2 < card.requirements.o2) return false;
+            if (card.requirements.oceans && oceans < card.requirements.oceans) return false;
+            return true;
         },
 
-        getHexStyle(cell) {
-            return `left: ${cell.x}px; top: ${cell.y}px; width: 69.28px; height: 80px;`;
+        // Подсветка валидных гексов
+        isValidPlacement(cell) {
+            if (!this.state.pendingAction || cell.tile) return false;
+            const type = this.state.pendingAction.type;
+            if (type === 'OCEAN') return cell.type === 'OCEAN_RESERVE';
+            if (type === 'CITY') {
+                const neighbors = this.getNeighbors(cell);
+                return !neighbors.some(n => n.tile?.type === 'CITY');
+            }
+            if (type === 'GREENERY') {
+                if (this.activePlayer.tilesCount === 0) return cell.type !== 'OCEAN_RESERVE';
+                const neighbors = this.getNeighbors(cell);
+                return neighbors.some(n => n.tile?.ownerId === this.activePlayer.id);
+            }
+            return cell.type !== 'OCEAN_RESERVE';
         },
 
-        // --- ЛОГИКА ОПЛАТЫ ---
-        startCardPayment(card) {
+        getNeighbors(cell) {
+            const dirs = [[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]];
+            return this.state.board.filter(c => dirs.some(d => c.q === cell.q+d[0] && c.r === cell.r+d[1]));
+        },
+
+        // Экономика и оплата
+        calcCovered() {
+            let c = 0;
+            if (this.selectedCard?.tags.includes('building')) c += Math.min(this.pay.steel, this.activePlayer.resources.steel) * 2;
+            if (this.selectedCard?.tags.includes('space')) c += Math.min(this.pay.ti, this.activePlayer.resources.titanium) * 3;
+            return c;
+        },
+        calcMCNeeded() {
+            const need = Math.max(0, (this.selectedCard?.cost || 0) - this.calcCovered());
+            return need;
+        },
+        startPayment(card) {
             this.selectedCard = card;
-            this.payment.steel = 0;
-            this.payment.titanium = 0;
-            this.showPaymentModal = true;
-        },
-        calculateCoveredFunds() {
-            let funds = 0;
-            if (this.selectedCard.tags.includes('building')) funds += this.payment.steel * 2;
-            if (this.selectedCard.tags.includes('space')) funds += this.payment.titanium * 3;
-            return funds;
-        },
-        calculateMCRemainder() {
-            const rem = this.selectedCard.baseCost - this.calculateCoveredFunds();
-            return rem < 0 ? 0 : rem;
-        },
-        isPaymentValid() {
-            return this.calculateMCRemainder() <= this.activePlayer.resources.megacredits;
+            this.pay = { steel: 0, ti: 0 };
+            this.showModal = true;
         },
         confirmPayment() {
             const card = this.selectedCard;
-            let remainingCost = card.baseCost;
+            const steelUsed = Math.min(this.pay.steel, this.activePlayer.resources.steel);
+            const tiUsed = Math.min(this.pay.ti, this.activePlayer.resources.titanium);
+            const mcNeeded = this.calcMCNeeded();
+
+            this.activePlayer.resources.steel -= steelUsed;
+            this.activePlayer.resources.titanium -= tiUsed;
+            this.activePlayer.resources.megacredits -= mcNeeded;
+
+            this.showModal = false;
+            this.notify(`Карта "${card.name}" сыграна!`);
+            this.state.actionsTaken++;
             
-            if (card.tags.includes('space')) {
-                const useTi = Math.min(this.payment.titanium, this.activePlayer.resources.titanium);
-                this.activePlayer.resources.titanium -= useTi;
-                remainingCost -= useTi * 3;
-            }
-            if (card.tags.includes('building')) {
-                const useSt = Math.min(this.payment.steel, this.activePlayer.resources.steel);
-                this.activePlayer.resources.steel -= useSt;
-                remainingCost -= useSt * 2;
-            }
-            if (remainingCost > 0) {
-                this.activePlayer.resources.megacredits -= remainingCost;
-            }
-            
-            this.showPaymentModal = false;
-            
-            if (card.placementTileType) {
-                this.state.pendingAction = { type: 'PLACE_TILE', tileType: card.placementTileType, card };
+            if (card.placementType) {
+                this.state.pendingAction = { type: card.placementType, cardId: card.id };
             } else {
-                this.endTurn();
+                this.endTurnLogic();
             }
         },
 
-        // --- ЛОГИКА ПОЛЯ И ПРАВИЛ ---
-        getNeighbors(cell) {
-            const dirs = [{q:1,r:0}, {q:1,r:-1}, {q:0,r:-1}, {q:-1,r:0}, {q:-1,r:1}, {q:0,r:1}];
-            return this.state.board.filter(c => {
-                const dq = c.q - cell.q;
-                const dr = c.r - cell.r;
-                return dirs.some(d => d.q === dq && d.r === dr);
-            });
+        // Стандартные проекты
+        standardProject(type) {
+            if (type === 'power') {
+                this.activePlayer.resources.heat -= 14;
+                this.activePlayer.production.energy += 1;
+            } else if (type === 'aquifer') {
+                this.activePlayer.resources.megacredits -= 18;
+                this.state.pendingAction = { type: 'OCEAN' };
+                this.notify('Разместите жетон океана');
+            } else if (type === 'greenery') {
+                this.activePlayer.resources.plants -= 8;
+                this.state.pendingAction = { type: 'GREENERY' };
+                this.notify('Разместите жетон леса');
+            } else if (type === 'city') {
+                this.activePlayer.resources.megacredits -= 25;
+                this.state.pendingAction = { type: 'CITY' };
+                this.notify('Разместите жетон города');
+            }
+            this.state.actionsTaken++;
         },
+
+        // Размещение на поле
         handleHexClick(cell) {
-            if (!this.state.pendingAction) return;
-            const action = this.state.pendingAction;
+            if (!this.state.pendingAction || !this.isValidPlacement(cell)) return;
             
-            if (cell.tile) { alert("Клетка уже занята!"); return; }
+            const type = this.state.pendingAction.type;
+            cell.tile = { type, ownerId: this.activePlayer.id };
             
-            if (action.tileType === 'OCEAN' && cell.type !== 'OCEAN_RESERVE') {
-                alert("Океаны можно размещать только в зарезервированных зонах!"); return;
-            }
-            if (action.tileType === 'CITY') {
-                const neighbors = this.getNeighbors(cell);
-                if (neighbors.some(n => n.tile && n.tile.type === 'CITY')) {
-                    alert("Города не могут стоять рядом с другими городами!"); return;
-                }
-            }
-            if (action.tileType === 'GREENERY') {
-                const neighbors = this.getNeighbors(cell);
-                const ownTiles = this.state.board.filter(c => c.tile && c.tile.ownerId === this.activePlayer.id);
-                if (ownTiles.length > 0) {
-                    const hasAdjacentOwn = neighbors.some(n => n.tile && n.tile.ownerId === this.activePlayer.id);
-                    if (!hasAdjacentOwn) {
-                        const validHexes = this.state.board.filter(c => !c.tile && this.getNeighbors(c).some(n => n.tile && n.tile.ownerId === this.activePlayer.id));
-                        if (validHexes.length > 0) {
-                            alert("Леса должны граничить с вашими тайлами!"); return;
-                        }
-                    }
-                }
-            }
-
-            cell.tile = { type: action.tileType, ownerId: action.tileType === 'OCEAN' ? null : this.activePlayer.id };
-
-            if (action.tileType === 'OCEAN') {
+            if (type === 'OCEAN') {
                 this.state.globalOceans++;
                 this.activePlayer.terraformRating++;
-            } else if (action.tileType === 'GREENERY') {
-                this.state.globalOxygen += 1;
+            } else if (type === 'GREENERY') {
+                this.state.globalOxygen = Math.min(14, this.state.globalOxygen + 1);
                 this.activePlayer.terraformRating++;
+            } else if (type === 'CITY') {
+                this.activePlayer.production.megacredits += 1;
             }
 
+            this.activePlayer.tilesCount = (this.activePlayer.tilesCount || 0) + 1;
+            this.notify(`Жетон ${type} размещен!`);
             this.state.pendingAction = null;
-            this.endTurn();
+            this.endTurnLogic();
+        },
+        cancelPlacement() {
+            this.state.pendingAction = null;
+            this.notify('Размещение отменено. Действие потрачено.', 'warn');
         },
 
-        // --- УПРАВЛЕНИЕ ХОДАМИ И ФАЗАМИ ---
+        // Управление ходом
+        endTurnLogic() {
+            this.checkGameEnd();
+            if (this.state.gameEnded) return;
+            
+            // Передача хода следующему активному
+            let idx = this.state.activePlayerIndex;
+            let tries = 0;
+            do {
+                idx = (idx + 1) % this.state.playerOrder.length;
+                tries++;
+            } while (this.state.players.find(p => p.id === this.state.playerOrder[idx]).passed && tries < this.state.playerOrder.length);
+            
+            if (this.state.players.every(p => p.passed)) {
+                this.startProduction();
+            } else {
+                this.state.activePlayerIndex = idx;
+                this.state.actionsTaken = 0;
+            }
+        },
         passTurn() {
             this.activePlayer.passed = true;
-            this.checkPhaseEnd();
+            this.notify(`${this.activePlayer.id} спасовал.`);
+            this.endTurnLogic();
         },
-        endTurn() {
-            let nextIndex = this.state.activePlayerIndex;
-            let attempts = 0;
-            while (attempts < this.state.playerOrder.length) {
-                nextIndex = (nextIndex + 1) % this.state.playerOrder.length;
-                const nextPlayer = this.state.players.find(p => p.id === this.state.playerOrder[nextIndex]);
-                if (!nextPlayer.passed) {
-                    this.state.activePlayerIndex = nextIndex;
-                    return;
-                }
-                attempts++;
-            }
-            this.startProductionPhase();
-        },
-        checkPhaseEnd() {
-            if (this.state.players.every(p => p.passed)) {
-                this.startProductionPhase();
-            } else {
-                this.endTurn();
-            }
-        },
-        startProductionPhase() {
+
+        // Фаза производства
+        startProduction() {
             this.state.players.forEach(p => {
+                // Энергия -> Тепло
                 p.resources.heat += p.resources.energy;
                 p.resources.energy = 0;
-                
-                p.resources.megacredits += p.terraformRating + p.production.megacredits;
+                // Доход
+                const mc = Math.max(0, p.terraformRating + p.production.megacredits);
+                p.resources.megacredits += mc;
                 p.resources.steel += p.production.steel;
                 p.resources.titanium += p.production.titanium;
                 p.resources.plants += p.production.plants;
                 p.resources.energy += p.production.energy;
                 p.resources.heat += p.production.heat;
-                
                 p.passed = false;
+                p.tilesCount = p.tilesCount || 0;
             });
-            
             this.state.generation++;
-            const first = this.state.playerOrder.shift();
-            this.state.playerOrder.push(first);
+            this.state.playerOrder.push(this.state.playerOrder.shift());
             this.state.activePlayerIndex = 0;
-            
-            alert(`Поколение ${this.state.generation} началось! Ресурсы начислены.`);
+            this.state.actionsTaken = 0;
+            this.notify(`Поколение ${this.state.generation} началось. Ресурсы начислены.`);
+        },
+
+        // Исследования
+        startResearch() {
+            if (this.state.researchPhaseActive) return;
+            this.state.researchPhaseActive = true;
+            this.state.players.forEach(p => {
+                for(let i=0; i<4; i++) {
+                    p.handCards.push(this.drawCard());
+                }
+            });
+            this.notify('Каждый игрок получил по 4 карты. Покупайте или сбрасывайте (демо: авто-в руку).');
+            setTimeout(() => this.state.researchPhaseActive = false, 500);
+        },
+        drawCard() {
+            const pool = [
+                {id:'c1', name:'Аквафер', cost: 18, tags:['building'], placementType:'OCEAN'},
+                {id:'c2', name:'Город-Сад', cost: 23, tags:['building','city'], placementType:'CITY'},
+                {id:'c3', name:'Леса Амазонки', cost: 20, tags:['plant'], placementType:'GREENERY', requirements:{temp:-10}},
+                {id:'c4', name:'Спутник', cost: 27, tags:['space'], requirements:{temp:-20}},
+                {id:'c5', name:'Геодезисты', cost: 22, tags:['science'], placementType:'GREENERY', requirements:{oceans:2}}
+            ];
+            return pool[Math.floor(Math.random() * pool.length)];
+        },
+
+        // Конец игры и очки
+        checkGameEnd() {
+            if (this.state.globalTemperature >= 8 && this.state.globalOxygen >= 14 && this.state.globalOceans >= 9) {
+                this.state.gameEnded = true;
+            }
+        },
+        calculateVPForPlayer(p) {
+            let vp = p.terraformRating;
+            // +1 за каждый город/лес (упрощенно)
+            vp += (p.tilesCount || 0);
+            // Бонус за производство (демо)
+            return vp;
+        },
+        calculateVP() { return this.calculateVPForPlayer(this.activePlayer); },
+
+        // Утилиты
+        notify(msg) {
+            const id = Date.now();
+            this.state.notifications.push({id, msg});
+            setTimeout(() => this.removeNotification(id), 4000);
+        },
+        removeNotification(id) {
+            this.state.notifications = this.state.notifications.filter(n => n.id !== id);
+        },
+        resetGame() {
+            window.location.reload();
         }
     }
 }
